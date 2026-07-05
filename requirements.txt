@@ -1,9 +1,10 @@
-requires-python>=3.14.0
-
+# Requires Python >= 3.14.0
 flask>=3.0.0
 flask-sqlalchemy>=3.1.1
 sqlalchemy>=2.0.0
+
 requests>=2.31.0
 werkzeug>=3.0.0
+
 pytest>=8.0.0
 pylint>=3.0.0
