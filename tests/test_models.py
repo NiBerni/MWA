@@ -2,7 +2,7 @@ import uuid
 from datetime import date
 
 from src.database import db
-from src.models import Movie, User
+from src.models import Director, Movie, User
 
 TEST_PASSWORD = "S3cur3P@ssw0rd!"
 
@@ -10,7 +10,7 @@ TEST_PASSWORD = "S3cur3P@ssw0rd!"
 def create_user(username: str = "testuser") -> User:
 	"""Create and stage a test user."""
 	user = User(username=username)
-	user.set_password(TEST_PASSWORD)
+	user.password = TEST_PASSWORD
 	db.session.add(user)
 	return user
 
@@ -67,7 +67,7 @@ def test_user_password_is_hashed(app):
 	"""Test that a User password is stored as a hash, not plain text."""
 	with app.app_context():
 		user = User(username="testuser")
-		user.set_password(TEST_PASSWORD)
+		user.password = TEST_PASSWORD
 
 		assert user.password_hash is not None
 		assert user.password_hash != TEST_PASSWORD
@@ -77,7 +77,7 @@ def test_user_password_checking(app):
 	"""Test that password verification accepts correct and rejects the wrong password."""
 	with app.app_context():
 		user = User(username="testuser")
-		user.set_password(TEST_PASSWORD)
+		user.password = TEST_PASSWORD
 
 		assert user.check_password(TEST_PASSWORD) is True
 		assert user.check_password("Wr0ngP@ssw0rd!") is False

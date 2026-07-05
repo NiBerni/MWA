@@ -1,7 +1,8 @@
 import uuid
-from typing import List
+from datetime import date
+from typing import List, Optional
 
-from sqlalchemy import ForeignKey, Integer, String, Uuid
+from sqlalchemy import Date, ForeignKey, Integer, String, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from werkzeug.security import check_password_hash, generate_password_hash
 
@@ -28,13 +29,36 @@ class User(db.Model):
 			"Movie", back_populates="user", cascade="all, delete-orphan"
 	)
 
-	def set_password(self, password: str) -> None:
-		"""Hashes the password securely using werkzeug."""
+	@property
+	def password(self) -> None:
+		"""Preventing reading the plain-text password."""
+		raise AttributeError("Password is write-only.")
+
+	@password.setter
+	def password(self, password: str) -> None:
+		"""Hash and store the password when assigned."""
 		self.password_hash = generate_password_hash(password)
 
 	def check_password(self, password: str) -> bool:
 		"""Verifies the password against the stored hash."""
 		return check_password_hash(self.password_hash, password)
+
+
+class Director(db.Model):
+	"""
+	Director model representing the individual who directed a Movie.
+	Extended with birthdate and nationality for richer metadata.
+	"""
+	__tablename__ = "directors"
+
+	id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+	name: Mapped[str] = mapped_column(String(128), nullable=False)
+	birthdate: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
+	nationality: Mapped[str] = mapped_column(String(64), nullable=True)
+
+	movies: Mapped[List["Movie"]] = relationship(
+			"Movie", back_populates="director"
+	)
 
 
 class Movie(db.Model):
@@ -50,4 +74,8 @@ class Movie(db.Model):
 	user_id: Mapped[uuid.UUID] = mapped_column(
 			Uuid, ForeignKey("users.id"), nullable=False
 	)
+	director_id: Mapped[Optional[int]] = mapped_column(
+			Integer, ForeignKey("directors.id"), nullable=True
+	)
 	user: Mapped["User"] = relationship("User", back_populates="favorite_movies")
+	director: Mapped[Optional["Director"]] = relationship("Director", back_populates="movies")
