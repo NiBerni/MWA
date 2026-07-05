@@ -2,6 +2,8 @@ from typing import Any, Mapping, Optional
 
 from flask import Flask
 
+from src.database import db
+
 
 def create_app(test_config: Optional[Mapping[str, Any]] = None) -> Flask:
 	"""
@@ -15,15 +17,17 @@ def create_app(test_config: Optional[Mapping[str, Any]] = None) -> Flask:
 	# Load default configuration
 	app.config.from_mapping(
 			SECRET_KEY='dev',
+			SQLALCHEMY_DATABASE_URI="sqlite:///moviewebapp.db",
 			SQLALCHEMY_TRACK_MODIFICATIONS=False,
 	)
 
-	# Loaf the instance config if it exists, when not testing
+	# Load the instance config if it exists when not testing
 	if test_config is None:
 		app.config.from_pyfile("config.py", silent=True)
 	else:
 		# Load the test config if passed in
 		app.config.from_mapping(test_config)
+	db.init_app(app)
 
 	@app.route("/ping")
 	def ping() -> dict[str, str]:

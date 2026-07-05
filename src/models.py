@@ -16,7 +16,7 @@ class User(db.Model):
 	__tablename__ = "users"
 
 	id: Mapped[uuid.UUID] = mapped_column(
-			Uuid, primary_key=True, dafault=uuid.uuid4
+			Uuid, primary_key=True, default=uuid.uuid4
 	)
 	username: Mapped[str] = mapped_column(
 			String(64), unique=True, nullable=False
