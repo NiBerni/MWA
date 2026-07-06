@@ -47,6 +47,26 @@ class OMDbClient:
 		except requests.RequestException as e:
 			raise OMDbAPIError(f"Network error occurred while contacting OMDb: {e}") from e
 
+	def fetch_movie_by_id(self, imdb_id: str) -> dict[str, Any]:
+		"""Searches for a single movie by its exact IMDb ID."""
+		params = {
+				"apikey": self.api_key,
+				"i":      imdb_id,
+				"type":   "movie"
+		}
+		try:
+			response = requests.get(self.base_url, params=params, timeout=self.timeout)
+			response.raise_for_status()
+			data = response.json()
+
+			if data.get("Response") == "False":
+				raise OMDbAPIError(data.get("Error", "Invalid IMDb ID provided."))
+			return data
+		except requests.RequestException as e:
+			raise OMDbAPIError(f"Network error occurred while contacting OMDb: {e}") from e
+		except ValueError as ve:
+			raise OMDbAPIError("Received invalid JSON from OMDb.") from ve
+
 	def search_movies(self, query: str) -> list[dict[str, Any]]:
 		"""Searches for a phrase and returns a list of matching movies."""
 		params = {

@@ -96,3 +96,27 @@ def test_search_movies_not_found(client: OMDbClient) -> None:
 	)
 	with pytest.raises(OMDbAPIError, match="Movie not found!"):
 		client.search_movies("GibberishTitleThatNobodyMade")
+
+
+@responses.activate
+def test_fetch_movie_by_id_success(client: OMDbClient) -> None:
+	"""Test that fetching a movie by its unique IMDb ID returns data."""
+	responses.add(
+			responses.GET,
+			"http://omdbapi.com/",
+			json={
+					"Response":   "True",
+					"Title":      "Dune",
+					"Year":       "2021",
+					"imdbID":     "tt1160419",
+					"Director":   "Denis Villeneuve",
+					"Genre":      "Sci_Fi, Adventure",
+					"imdbRating": "8.0"
+			},
+			status=200
+	)
+	result = client.fetch_movie_by_id("tt1160419")
+
+	assert result["Title"] == "Dune"
+	assert result["imdbID"] == "tt1160419"
+	assert "Genre" in result

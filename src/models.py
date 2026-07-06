@@ -71,6 +71,7 @@ class Movie(db.Model):
 	imdb_id: Mapped[str] = mapped_column(String(20), nullable=False)
 	title: Mapped[str] = mapped_column(String(255), nullable=False)
 	year: Mapped[str] = mapped_column(String(4), nullable=True)
+	rating: Mapped[Optional[str]] = mapped_column(String(5), nullable=True)
 	genre: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
 	user_id: Mapped[uuid.UUID] = mapped_column(
 			Uuid, ForeignKey("users.id"), nullable=False
