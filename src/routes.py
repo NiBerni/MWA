@@ -62,12 +62,13 @@ def get_favorites() -> Any:
 	
 	movie_list = [
 			{
-					"id":      m.id,
-					"imdb_id": m.imdb_id,
-					"title":   m.title,
-					"year":    m.year,
-					"rating":  m.rating,
-					"genre":   m.genre
+					"id":         m.id,
+					"imdb_id":    m.imdb_id,
+					"title":      m.title,
+					"year":       m.year,
+					"rating":     m.rating,
+					"genre":      m.genre,
+					"poster_url": m.poster_url
 			}
 			for m in movies
 	]
