@@ -4,7 +4,7 @@ from flask import Blueprint, jsonify, request
 from sqlalchemy import select, tstring
 
 from src.database import db
-from src.decorators import login_required
+from src.decorators import login_required, profile_query
 from src.models import Movie, User
 
 api_bp = Blueprint("api", __name__, url_prefix="/api")
@@ -81,19 +81,15 @@ def update_favorite(movie_id: int) -> Any:
 	
 	if not data:
 		return jsonify({"error": "Invalid data payload"}), 400
-	
-	# Find the movie AND ensure it belongs to the current user
 	stmt = select(Movie).where(
 			Movie.id == movie_id,
 			Movie.user_id == current_user.id
 	)
 	movie = db.session.execute(stmt).scalar_one_or_none()
-	
 	if not movie:
 		# Returning 404 instead of 403 prevents attackers from scanning valid movie IDs
 		return jsonify({"error": "Movie not found"}), 404
 	
-	# Update allowed fields
 	if "rating" in data:
 		movie.rating = str(data["rating"])
 	if "genre" in data:
@@ -138,3 +134,74 @@ def delete_favorite(movie_id: int) -> Any:
 		return jsonify({"error": "Failed to delete movie"}), 500
 	
 	return "", 204  # 204 No Content is standard for successful deletions
+
+
+@api_bp.route("/favorites/search", methods=["GET"])
+@login_required
+@profile_query
+def search_favorites() -> Any:
+	"""
+	Dynamic Search Endpoint.
+	Filters by Genre, Director, and IMDb Rating boundaries.
+	Features SQL-safe dynamic sorting via PEP 750 t-strings.
+	"""
+	current_user = cast(User, getattr(request, "user"))
+	
+	# Extract strings
+	genre_filter = request.args.get("genre", default=None, type=str)
+	author_filter = request.args.get("author", default=None, type=str)
+	
+	# Extract numerical boundaries
+	min_rating = request.args.get("min_rating", default=None, type=float)
+	max_rating = request.args.get("max_rating", default=None, type=float)
+	
+	# Extract sort preference (default to highest rated first)
+	sort_by = request.args.get("sort", default="rating_desc", type=str)
+	
+	try:
+		# -------------------------------------------------------------------------
+		# SECURE DYNAMIC T-STRING LOGIC:
+		# - We cast `m.rating` to FLOAT for accurate mathematical boundary checks.
+		# - We use `CASE WHEN` in the ORDER BY clause to dynamically choose the
+		#   sort direction based on the user's parameter. This prevents attackers
+		#   from injecting malicious column names into an ORDER BY clause.
+		# -------------------------------------------------------------------------
+		search_query = tstring(t"""
+	            SELECT m.id, m.imdb_id, m.title, m.year, m.rating, m.genre, d.name AS director_name
+	            FROM movies m
+	            LEFT JOIN directors d ON m.director_id = d.id
+	            WHERE m.user_id = {current_user.id}
+	            AND ({genre_filter} IS NULL OR m.genre LIKE '%' || {genre_filter} || '%')
+	            AND ({author_filter} IS NULL OR d.name LIKE '%' || {author_filter} || '%')
+	            AND ({min_rating} IS NULL OR CAST(m.rating AS FLOAT) >= {min_rating})
+	            AND ({max_rating} IS NULL OR CAST(m.rating AS FLOAT) <= {max_rating})
+	            ORDER BY
+	                CASE WHEN {sort_by} = 'rating_desc' THEN CAST(m.rating AS FLOAT) END DESC,
+	                CASE WHEN {sort_by} = 'rating_asc' THEN CAST(m.rating AS FLOAT) END ASC,
+	                CASE WHEN {sort_by} = 'title_asc' THEN m.title END ASC,
+	                CAST(m.rating AS FLOAT) DESC -- Fallback default
+	        """)
+		
+		# Execute the raw parameterized query
+		result = db.session.execute(search_query).mappings().all()
+		
+		# Format the response
+		movie_list = [
+				{
+						"id":       row["id"],
+						"imdb_id":  row["imdb_id"],
+						"title":    row["title"],
+						"year":     row["year"],
+						"rating":   row["rating"],
+						"genre":    row["genre"],
+						"director": row["director_name"]
+				}
+				for row in result
+		]
+		
+		return jsonify(movie_list), 200
+	
+	except Exception as e:
+		import logging
+		logging.getLogger(__name__).error(f"Search query failed: {e}", exc_info=True)
+		return jsonify({"error": "Failed to process search query"}), 500
