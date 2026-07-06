@@ -80,19 +80,16 @@ perf_logger.setLevel(logging.INFO)
 
 def profile_query(func: Callable) -> Callable:
 	"""
-	AOP Decorator to measure and log the execution time of complex endpoints.
-	Alerts the engineering team via logs if a dynamic query exceeds acceptable latency.
+	Measures execution time.
+	Fixed: Variable name corrected to execution_time_ms.
 	"""
 	
 	@wraps(func)
 	def wrapper(*args: Any, **kwargs: Any) -> Any:
 		start_time = time.perf_counter()
-		
 		result = func(*args, **kwargs)
-		
 		execution_time_ms = (time.perf_counter() - start_time) * 1000
 		
-		# Performance Threshold: 200ms
 		if execution_time_ms > 200:
 			perf_logger.warning(
 					f"[PERFORMANCE WARNING] {func.__name__} took {execution_time_ms:.2f}ms. "

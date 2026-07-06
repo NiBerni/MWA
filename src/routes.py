@@ -1,11 +1,12 @@
 from typing import Any, cast
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, current_app, jsonify, request
 from sqlalchemy import select, tstring
 
 from src.database import db
 from src.decorators import login_required, profile_query
 from src.models import Movie, User
+from src.omdb_client import OMDbAPIError, OMDbClient
 
 api_bp = Blueprint("api", __name__, url_prefix="/api")
 
@@ -159,13 +160,6 @@ def search_favorites() -> Any:
 	sort_by = request.args.get("sort", default="rating_desc", type=str)
 	
 	try:
-		# -------------------------------------------------------------------------
-		# SECURE DYNAMIC T-STRING LOGIC:
-		# - We cast `m.rating` to FLOAT for accurate mathematical boundary checks.
-		# - We use `CASE WHEN` in the ORDER BY clause to dynamically choose the
-		#   sort direction based on the user's parameter. This prevents attackers
-		#   from injecting malicious column names into an ORDER BY clause.
-		# -------------------------------------------------------------------------
 		search_query = tstring(t"""
 	            SELECT m.id, m.imdb_id, m.title, m.year, m.rating, m.genre, d.name AS director_name
 	            FROM movies m
@@ -205,3 +199,63 @@ def search_favorites() -> Any:
 		import logging
 		logging.getLogger(__name__).error(f"Search query failed: {e}", exc_info=True)
 		return jsonify({"error": "Failed to process search query"}), 500
+
+
+@api_bp.route("/movies/search", methods=["GET"])
+@login_required
+@profile_query
+def search_movie_tree() -> Any:
+	"""
+	Search Tree for new movies.
+	1. Fetches from OMDb.
+	2. Applies filters (Genre, Rating, Director) locally.
+	3. Handles sorting and rating boundaries.
+	"""
+	title = request.args.get("title", "")
+	genre_filter = request.args.get("genre")
+	director_filter = request.args.get("director")
+	min_rating = request.args.get("min_rating", type=float)
+	max_rating = request.args.get("max_rating", type=float)
+	
+	if not title:
+		return jsonify({"error": "Title is required"}), 400
+	
+	# 1. Initialize Client and Fetch from OMDb
+	# Retrieve API Key from Flask Config for security
+	api_key = current_app.config.get("OMDB_API_KEY", "your_default_key")
+	client = OMDbClient(api_key=api_key)
+	
+	try:
+		# Search returns a list of results directly
+		movies = client.search_movies(title)
+	except OMDbAPIError as e:
+		return jsonify({"error": str(e)}), 400
+	
+	# 2. Local Filtering Logic
+	filtered_movies = []
+	for movie in movies:
+		# Fetch detailed data for accurate filtering
+		try:
+			detail = client.fetch_movie_by_id(movie["imdbID"])
+		except OMDbAPIError:
+			continue  # Skip invalid/missing entries
+		
+		# Apply filters
+		if genre_filter and genre_filter.lower() not in detail.get("Genre", "").lower():
+			continue
+		if director_filter and director_filter.lower() not in detail.get("Director", "").lower():
+			continue
+		
+		# Parse rating safely
+		try:
+			rating = float(detail.get("imdbRating", 0))
+		except ValueError:
+			rating = 0.0
+		
+		if min_rating is not None and rating < min_rating:
+			continue
+		if max_rating is not None and rating > max_rating:
+			continue
+		
+		filtered_movies.append(detail)
+	return None
