@@ -99,3 +99,21 @@ def test_search_sorting(search_test_data: tuple[FlaskClient, str]) -> None:
 	data = response.get_json()
 	assert data[0]["title"] == "Dune"
 	assert data[-1]["title"] == "Inception"
+
+
+# In tests/test_search.py
+
+def test_search_movie_tree_api_failure(client, auth_headers):
+	"""
+	Test that search handles API errors gracefully.
+	Uses 'auth_headers' for authentication instead of 'logged_in_user'.
+	"""
+	# Use 'auth_headers' in the request to ensure the route is protected
+	response = client.get(
+			"/api/movies/search?title=Inception",
+			headers=auth_headers
+	)
+	
+	# Assertions...
+	assert response.status_code == 401
+	assert "error" in response.json
