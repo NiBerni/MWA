@@ -35,6 +35,23 @@ def client(app: Flask):
 	return app.test_client()
 
 
+# tests/conftest.py
+
+@pytest.fixture
+def clean_database(app: Flask) -> Generator[None, None, None]:
+	"""
+	Cleans all database tables after each test.
+	Uses sorted_tables to respect foreign key constraints during deletion.
+	"""
+	yield  # Test runs here
+	
+	with app.app_context():
+		# Iterate over tables in reverse order to respect foreign key constraints
+		for table in reversed(db.metadata.sorted_tables):
+			db.session.execute(table.delete())
+		db.session.commit()
+
+
 @pytest.fixture(scope="module")
 def seed_data(app: Flask) -> dict[str, Any]:
 	"""

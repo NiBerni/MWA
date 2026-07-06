@@ -15,7 +15,7 @@ class User(db.Model):
 	Uses UUID4 to prevent sequential ID guessing (enumeration).
 	"""
 	__tablename__ = "users"
-
+	
 	id: Mapped[uuid.UUID] = mapped_column(
 			Uuid, primary_key=True, default=uuid.uuid4
 	)
@@ -28,17 +28,17 @@ class User(db.Model):
 	favorite_movies: Mapped[List["Movie"]] = relationship(
 			"Movie", back_populates="user", cascade="all, delete-orphan"
 	)
-
+	
 	@property
 	def password(self) -> None:
 		"""Preventing reading the plain-text password."""
 		raise AttributeError("Password is write-only.")
-
+	
 	@password.setter
 	def password(self, password: str) -> None:
 		"""Hash and store the password when assigned."""
 		self.password_hash = generate_password_hash(password)
-
+	
 	def check_password(self, password: str) -> bool:
 		"""Verifies the password against the stored hash."""
 		return check_password_hash(self.password_hash, password)
@@ -50,12 +50,12 @@ class Director(db.Model):
 	Extended with birthdate and nationality for richer metadata.
 	"""
 	__tablename__ = "directors"
-
+	
 	id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
 	name: Mapped[str] = mapped_column(String(128), nullable=False)
 	birthdate: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
 	nationality: Mapped[str] = mapped_column(String(64), nullable=True)
-
+	
 	movies: Mapped[List["Movie"]] = relationship(
 			"Movie", back_populates="director"
 	)
@@ -66,13 +66,14 @@ class Movie(db.Model):
 	Movie model representing a user's favorite movie fetched from OMDb.
 	"""
 	__tablename__ = "movies"
-
+	
 	id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
 	imdb_id: Mapped[str] = mapped_column(String(20), nullable=False)
 	title: Mapped[str] = mapped_column(String(255), nullable=False)
 	year: Mapped[str] = mapped_column(String(4), nullable=True)
 	rating: Mapped[Optional[str]] = mapped_column(String(5), nullable=True)
 	genre: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+	poster_url: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
 	user_id: Mapped[uuid.UUID] = mapped_column(
 			Uuid, ForeignKey("users.id"), nullable=False
 	)

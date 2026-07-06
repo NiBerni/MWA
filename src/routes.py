@@ -26,10 +26,15 @@ def add_favorite() -> Any:
 	
 	current_user = cast(User, getattr(request, "user"))
 	
+	poster_url = data.get("poster_url")
+	if poster_url == "N/A":
+		poster_url = None
+	
 	new_movie = Movie(
 			imdb_id=data["imdb_id"],
 			title=data["title"],
-			user_id=current_user.id
+			user_id=current_user.id,
+			poster_url=poster_url
 	)
 	
 	try:
