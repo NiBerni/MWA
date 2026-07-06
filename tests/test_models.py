@@ -40,6 +40,8 @@ def test_movie_model_stores_expected_fields(app, seed_data):
 		assert movie.imdb_id == "tt1160419"
 		assert movie.title == "Dune"
 		assert movie.year == "2021"
+		assert "Sci-Fi" in movie.genre
+		assert "Horror" not in movie.genre
 
 
 def test_director_model_stores_expected_fields(app, seed_data):

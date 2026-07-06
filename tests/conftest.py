@@ -57,6 +57,7 @@ def seed_data(app: Flask) -> dict[str, Any]:
 				imdb_id="tt1160419",
 				title="Dune",
 				year="2021",
+				genre="Sci-Fi, Adventure",
 				user=user,
 				director=director
 		)
