@@ -31,6 +31,9 @@ def create_app(test_config: Optional[Mapping[str, Any]] = None) -> Flask:
 	from src.routes import api_bp
 	app.register_blueprint(api_bp)
 	
+	from src.auth import auth_bp
+	app.register_blueprint(auth_bp)
+	
 	@app.route("/ping")
 	def ping() -> dict[str, str]:
 		return {"status": "ok"}

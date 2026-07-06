@@ -214,44 +214,40 @@ def search_movie_tree() -> Any:
 	Search Tree for new movies.
 	1. Fetches from OMDb.
 	2. Applies filters (Genre, Rating, Director) locally.
-	3. Handles sorting and rating boundaries.
+	3. Sorts based on user preference.
 	"""
+	# 1. Extract parameters
 	title = request.args.get("title", "")
 	genre_filter = request.args.get("genre")
 	director_filter = request.args.get("director")
 	min_rating = request.args.get("min_rating", type=float)
 	max_rating = request.args.get("max_rating", type=float)
+	sort_by = request.args.get("sort", default="rating_desc")
 	
 	if not title:
 		return jsonify({"error": "Title is required"}), 400
 	
-	# 1. Initialize Client and Fetch from OMDb
-	# Retrieve API Key from Flask Config for security
 	api_key = current_app.config.get("OMDB_API_KEY", "your_default_key")
 	client = OMDbClient(api_key=api_key)
 	
 	try:
-		# Search returns a list of results directly
 		movies = client.search_movies(title)
 	except OMDbAPIError as e:
 		return jsonify({"error": str(e)}), 400
 	
-	# 2. Local Filtering Logic
 	filtered_movies = []
 	for movie in movies:
-		# Fetch detailed data for accurate filtering
 		try:
 			detail = client.fetch_movie_by_id(movie["imdbID"])
 		except OMDbAPIError:
-			continue  # Skip invalid/missing entries
+			continue
 		
-		# Apply filters
 		if genre_filter and genre_filter.lower() not in detail.get("Genre", "").lower():
 			continue
+		
 		if director_filter and director_filter.lower() not in detail.get("Director", "").lower():
 			continue
 		
-		# Parse rating safely
 		try:
 			rating = float(detail.get("imdbRating", 0))
 		except ValueError:
@@ -263,4 +259,13 @@ def search_movie_tree() -> Any:
 			continue
 		
 		filtered_movies.append(detail)
-	return None
+	
+	if sort_by == "rating_desc":
+		filtered_movies.sort(key=lambda x: float(x.get("imdbRating", 0)), reverse=True)
+	elif sort_by == "rating_asc":
+		filtered_movies.sort(key=lambda x: float(x.get("imdbRating", 0)))
+	elif sort_by == "title_asc":
+		filtered_movies.sort(key=lambda x: x.get("Title", "").lower())
+	
+	# 5. Return JSON response
+	return jsonify(filtered_movies), 200
