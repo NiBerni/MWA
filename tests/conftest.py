@@ -1,39 +1,73 @@
-from typing import Generator
+from datetime import date
+from typing import Any, Generator
 
 import pytest
 from flask import Flask
 
 from src.app import create_app
 from src.database import db
+from src.models import Director, Movie, User
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def app() -> Generator[Flask, None, None]:
 	"""
 	Fixture to create and configure a fresh Flask app instance for each test.
-	Utilizes an in-memory SQLite database for fast, isolated testing.
+	Uses an in-memory SQLite database for fast, isolated testing.
 	"""
 	app_instance = create_app({
 			"TESTING":                 True,
 			"SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:"
 	})
-
 	with app_instance.app_context():
-		# 1. Import all models BEFORE create_all so SQLAlchemy registers them
-
-		# 2. SQLAlchemy automatically resolves the correct creation order
-		# based on the ForeignKey constraints.
 		db.create_all()
-
 	# Yield the app to the test functions
 	yield app_instance
 
-	# 3. Teardown: Clean up the database after the test completes
 	with app_instance.app_context():
 		db.drop_all()
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def client(app: Flask):
 	"""Provides a simulated web client to send requests to the application."""
 	return app.test_client()
+
+
+@pytest.fixture(scope="module")
+def seed_data(app: Flask) -> dict[str, Any]:
+	"""
+	Populates the database with initial, reusable data.
+	Returns a dictionary of identifiers to avoid DetachedInstanceErrors
+	when accessing abjects outside the app context.
+	"""
+	with app.app_context():
+		user = User(username="cinephile_master")
+		user.password = "S3cur3P@ssw0rd!"
+		db.session.add(user)
+
+		director = Director(
+				name="Denis Villeneuve",
+				nationality="Canadian",
+				birthdate=date(1970, 10, 3)
+		)
+		db.session.add(director)
+
+		movie = Movie(
+				imdb_id="tt1160419",
+				title="Dune",
+				year="2021",
+				user=user,
+				director=director
+		)
+		db.session.add(movie)
+		db.session.commit()
+
+		return {
+				"user_id":       user.id,
+				"user_username": user.username,
+				"user_password": "S3cur3P@ssw0rd!",
+				"director_id":   director.id,
+				"movie_id":      movie.id,
+				"movie_title":   movie.title
+		}
