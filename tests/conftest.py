@@ -1,6 +1,6 @@
 import uuid
 from datetime import date
-from typing import Any, Generator
+from typing import Any, cast, Generator
 
 import pytest
 from flask import Flask
@@ -106,23 +106,17 @@ def auth_client_and_user(client: FlaskClient, app: Flask) -> uuid.UUID:
 	"""
 	Creates a dedicated test user, registers them in the database,
 	and simulates an active login session.
-
-	Returns:
-		uuid.UUID: The ID of the authenticated user to avoid ORM DetachedInstanceErrors.
 	"""
 	with app.app_context():
-		# 1. Create a unique test user
 		user = User(username=f"auth_test_{uuid.uuid4()}")
 		user.password = "secure_test_password"
 		db.session.add(user)
 		db.session.commit()
 		
-		# Capture the raw ID as a primitive before the session closes
-		user_id = user.id
+		# IDE Fix: Cast the value to satisfy PyCharm's static type checker
+		user_id = cast(uuid.UUID, user.id)
 	
-	# 2. Securely inject the user_id into the Flask session cookie
 	with client.session_transaction() as sess:
 		sess["user_id"] = str(user_id)
 	
-	# 3. Return the primitive ID so tests can make isolated queries
 	return user_id
