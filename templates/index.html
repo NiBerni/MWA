@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center mt-5">
+    <div class="col-md-6 col-lg-5">
+        <div class="card shadow-lg border-0 bg-dark text-white">
+            <div class="card-body p-5 text-center">
+                <h2 class="fw-bold mb-4">Welcome to MoviWebApp</h2>
+                <div class="alert alert-danger d-none" id="alert-box" role="alert"></div>
+
+                <form class="mb-3" id="login-form">
+                    <div class="form-floating mb-3 text-dark">
+                        <input class="form-control" id="username" placeholder="Username" required type="text">
+                        <label for="username">Username</label>
+                    </div>
+                    <div class="form-floating mb-3 text-dark">
+                        <input class="form-control" id="password" placeholder="Password" required type="password">
+                        <label for="password">Password</label>
+                    </div>
+                    <button class="btn btn-primary w-100 fw-bold py-2" id="login-btn" type="submit">Login</button>
+                </form>
+
+                <hr class="my-4 border-secondary">
+                <p class="small text-muted">Don't have an account?</p>
+                <a class="btn btn-outline-light w-100 py-2" href="{{ url_for('views.register') }}">Register New User</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('login-btn');
+        const alertBox = document.getElementById('alert-box');
+
+        btn.disabled = true;
+        btn.textContent = "Logging in...";
+        alertBox.classList.add('d-none');
+
+        const payload = {
+            username: document.getElementById('username').value,
+            password: document.getElementById('password').value
+        };
+
+        try {
+            const response = await fetch('/auth/login', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            });
+
+            if (response.ok) {
+                window.location.href = '/favorites';
+            } else {
+                const data = await response.json();
+                alertBox.textContent = data.error || "Login failed.";
+                alertBox.classList.remove('d-none');
+                btn.disabled = false;
+                btn.textContent = "Login";
+            }
+        } catch (err) {
+            alertBox.textContent = "Network error occurred.";
+            alertBox.classList.remove('d-none');
+            btn.disabled = false;
+            btn.textContent = "Login";
+        }
+    });
+</script>
+{% endblock %}
