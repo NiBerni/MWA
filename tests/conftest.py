@@ -1,8 +1,9 @@
 import uuid
 from datetime import date
-from typing import Any, cast, Generator
+from typing import Any, Generator
 
 import pytest
+from cryptography.fernet import Fernet
 from flask import Flask
 from flask.testing import FlaskClient
 
@@ -14,14 +15,18 @@ from src.models import Director, Movie, User
 @pytest.fixture(scope="module")
 def app() -> Generator[Flask, None, None]:
 	"""
-	Fixture to create and configure a fresh Flask app instance for each test.
+	Fixture to create and configure a fresh Flask app instance for the test module.
 	Uses an in-memory SQLite database for fast, isolated testing.
 	"""
+	# 1. Pass ALL configurations directly into the factory dictionary
 	app_instance = create_app({
 			"TESTING":                        True,
 			"SQLALCHEMY_DATABASE_URI":        "sqlite:///:memory:",
-			"SQLALCHEMY_TRACK_MODIFICATIONS": False
+			"SQLALCHEMY_TRACK_MODIFICATIONS": False,
+			"ENCRYPTION_KEY":                 Fernet.generate_key()  # Automatically injected on creation
 	})
+	
+	# 2. Use the correct variable name (app_instance) for the context
 	with app_instance.app_context():
 		db.create_all()
 		# Yield the app to the test functions
@@ -102,21 +107,23 @@ def auth_headers(client: FlaskClient, seed_data: dict[str, Any]) -> dict[Any, An
 
 
 @pytest.fixture
-def auth_client_and_user(client: FlaskClient, app: Flask) -> uuid.UUID:
-	"""
-	Creates a dedicated test user, registers them in the database,
-	and simulates an active login session.
-	"""
+def auth_client_and_user(app: Flask, client: FlaskClient) -> tuple[FlaskClient, User]:
+	"""Provides a test client with an authenticated session and a uniquely generated User."""
+	valid_uuid = uuid.uuid4()
+	unique_username = f"auth_{valid_uuid.hex[:8]}"
+	
 	with app.app_context():
-		user = User(username=f"auth_test_{uuid.uuid4()}")
-		user.password = "secure_test_password"
+		user = User(
+				id=valid_uuid,
+				username=unique_username,
+				password="securepassword123",
+				_omdb_api_key="fake_omdb_key_123"
+		)
 		db.session.add(user)
 		db.session.commit()
-		
-		# IDE Fix: Cast the value to satisfy PyCharm's static type checker
-		user_id = cast(uuid.UUID, user.id)
+		db.session.refresh(user)
 	
 	with client.session_transaction() as sess:
-		sess["user_id"] = str(user_id)
+		sess["user_id"] = str(valid_uuid)
 	
-	return user_id
+	yield client, user

@@ -23,14 +23,29 @@ def create_app(test_config: Optional[Mapping[str, Any]] = None) -> Flask:
 			SECRET_KEY=os.environ.get("FLASK_SECRET_KEY", "dev"),
 			SQLALCHEMY_DATABASE_URI=os.environ.get("DATABASE_URI", "sqlite:///moviewebapp.db"),
 			SQLALCHEMY_TRACK_MODIFICATIONS=False,
-			OMDB_API_KEY=os.environ.get("OMDB_API_KEY", "your_default_key")
+			OMDB_API_KEY=os.environ.get("OMDB_API_KEY", "your_default_key"),
+			
+			# --- 🛡️ ENCRYPTION CONFIGURATION ---
+			# A static 32-byte url-safe base64 fallback key is used here to prevent
+			# decryption failures during dev server reloads.
+			# In production, THIS MUST come from the environment variables.
+			ENCRYPTION_KEY=os.environ.get(
+					"ENCRYPTION_KEY",
+					"vE7_9-B5XGzP3r8Q2aR1_N9_L0K4Z2W1mJ8vD5xR9Qc="  # Static valid dev key
+			)
 	)
+	
 	# Load the instance config if it exists when not testing
 	if test_config is None:
 		app.config.from_pyfile("config.py", silent=True)
 	else:
 		# Load the test config if passed in
 		app.config.from_mapping(test_config)
+		
+		# Ensure tests have a consistent encryption key if not provided in test_config
+		if "ENCRYPTION_KEY" not in app.config:
+			app.config["ENCRYPTION_KEY"] = "vE7_9-B5XGzP3r8Q2aR1_N9_L0K4Z2W1mJ8vD5xR9Qc="
+	
 	db.init_app(app)
 	
 	from src.routes import api_bp

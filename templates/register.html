@@ -17,7 +17,16 @@
                         <input class="form-control" id="password" placeholder="Password" required type="password">
                         <label for="password">Password</label>
                     </div>
+                    <div class="form-floating mb-2 text-dark">
+                        <input class="form-control" id="omdb_api_key" placeholder="OMDb API Key" required type="text">
+                        <label for="omdb_api_key">OMDb API Key</label>
+                    </div>
+                    <div class="text-end mb-3">
+                        <small><a class="text-info text-decoration-none" href="http://www.omdbapi.com/apikey.aspx"
+                                  target="_blank">Get a free key here</a></small>
+                    </div>
                     <button class="btn btn-success w-100 fw-bold py-2" id="register-btn" type="submit">Register</button>
+
                 </form>
 
                 <hr class="my-4 border-secondary">
@@ -39,7 +48,8 @@
 
         const payload = {
             username: document.getElementById('username').value,
-            password: document.getElementById('password').value
+            password: document.getElementById('password').value,
+            omdb_api_key: document.getElementById('omdb_api_key').value
         };
 
         try {

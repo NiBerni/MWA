@@ -2,6 +2,8 @@ import uuid
 from datetime import date
 from typing import List, Optional
 
+from cryptography.fernet import Fernet
+from flask import current_app
 from sqlalchemy import Date, ForeignKey, Integer, String, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -25,6 +27,7 @@ class User(db.Model):
 	password_hash: Mapped[str] = mapped_column(
 			String(256), nullable=False
 	)
+	_omdb_api_key_encrypted: Mapped[str] = mapped_column("omdb_api_key", String(256), nullable=False)
 	favorite_movies: Mapped[List["Movie"]] = relationship(
 			"Movie", back_populates="user", cascade="all, delete-orphan"
 	)
@@ -42,6 +45,20 @@ class User(db.Model):
 	def check_password(self, password: str) -> bool:
 		"""Verifies the password against the stored hash."""
 		return check_password_hash(self.password_hash, password)
+	
+	@property
+	def omdb_api_key(self) -> str:
+		"""Transparently decrypts the API key for backend usage."""
+		fernet = Fernet(current_app.config["ENCRYPTION_KEY"])
+		decrypted_bytes = fernet.decrypt(self._omdb_api_key_encrypted.encode("utf-8"))
+		return decrypted_bytes.decode("utf-8")
+	
+	@omdb_api_key.setter
+	def omdb_api_key(self, api_key: str) -> None:
+		"""Transparently encrypts the API key before DB insertion."""
+		fernet = Fernet(current_app.config["ENCRYPTION_KEY"])
+		encrypted_bytes = fernet.encrypt(api_key.encode("utf-8"))
+		self._omdb_api_key_encrypted = encrypted_bytes.decode("utf-8")
 
 
 class Director(db.Model):
