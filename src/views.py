@@ -64,3 +64,12 @@ def add_movie() -> Any:
 	Renders the Add Movie search interface.
 	"""
 	return render_template("add_movie.html")
+
+
+@views_bp.route("/profile")
+@login_required
+def profile() -> Any:
+	"""
+	Renders the User Profile management page.
+	"""
+	return render_template("profile.html")

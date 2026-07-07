@@ -23,12 +23,6 @@ def create_app(test_config: Optional[Mapping[str, Any]] = None) -> Flask:
 			SECRET_KEY=os.environ.get("FLASK_SECRET_KEY", "dev"),
 			SQLALCHEMY_DATABASE_URI=os.environ.get("DATABASE_URI", "sqlite:///moviewebapp.db"),
 			SQLALCHEMY_TRACK_MODIFICATIONS=False,
-			OMDB_API_KEY=os.environ.get("OMDB_API_KEY", "your_default_key"),
-			
-			# --- 🛡️ ENCRYPTION CONFIGURATION ---
-			# A static 32-byte url-safe base64 fallback key is used here to prevent
-			# decryption failures during dev server reloads.
-			# In production, THIS MUST come from the environment variables.
 			ENCRYPTION_KEY=os.environ.get(
 					"ENCRYPTION_KEY",
 					"vE7_9-B5XGzP3r8Q2aR1_N9_L0K4Z2W1mJ8vD5xR9Qc="  # Static valid dev key
@@ -60,5 +54,14 @@ def create_app(test_config: Optional[Mapping[str, Any]] = None) -> Flask:
 	@app.route("/ping")
 	def ping() -> dict[str, str]:
 		return {"status": "ok"}
+	
+	@app.route("/favicon.ico")
+	def favicon() -> tuple[str, int]:
+		"""
+		Gracefully catches and handles automated browser requests for a legacy favicon file.
+
+		:return: An empty string and a 204 No Content HTTP status code.
+		"""
+		return "", 204
 	
 	return app

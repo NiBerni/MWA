@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center mt-5">
+    <div class="col-md-8 col-lg-6">
+        <div class="card shadow-lg border-0 bg-dark text-white">
+            <div class="card-body p-5">
+                <h2 class="fw-bold mb-4 text-center">User Profile</h2>
+                <div class="alert d-none" id="alert-box" role="alert"></div>
+
+                <form id="profile-form">
+                    <div class="mb-4">
+                        <label class="form-label text-light" for="new_password">Update Password (Optional)</label>
+                        <input class="form-control text-dark" id="new_password"
+                               placeholder="Leave blank to keep current password" type="password">
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label text-light" for="omdb_api_key">Update OMDb API Key (Optional)</label>
+                        <input class="form-control text-dark" id="omdb_api_key" placeholder="Enter new API Key"
+                               type="text">
+                    </div>
+
+                    <button class="btn btn-primary w-100 fw-bold py-2 mb-3" id="update-btn" type="submit">Update
+                        Profile
+                    </button>
+                </form>
+
+                <hr class="my-4 border-secondary">
+
+                <div class="text-center">
+                    <p class="text-muted small mb-2">Danger Zone</p>
+                    <button class="btn btn-outline-danger w-100" id="delete-btn">Delete Account</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- 1. Handle Profile Updates ---
+    document.getElementById('profile-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('update-btn');
+        const alertBox = document.getElementById('alert-box');
+
+        btn.disabled = true;
+        btn.textContent = "Updating...";
+        alertBox.classList.add('d-none');
+        alertBox.classList.remove('alert-success', 'alert-danger', 'alert-warning');
+
+        // Dynamically build the payload based on what the user typed
+        const payload = {};
+        const password = document.getElementById('new_password').value.trim();
+        const apiKey = document.getElementById('omdb_api_key').value.trim();
+
+        if (password) payload.password = password;
+        if (apiKey) payload.omdb_api_key = apiKey;
+
+        // Guard clause if user submits empty form
+        if (Object.keys(payload).length === 0) {
+            alertBox.textContent = "No changes were entered.";
+            alertBox.classList.add('alert-warning');
+            alertBox.classList.remove('d-none');
+            btn.disabled = false;
+            btn.textContent = "Update Profile";
+            return;
+        }
+
+        try {
+            const response = await fetch('/auth/profile', {
+                method: 'PATCH',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                alertBox.textContent = data.message || "Profile updated successfully!";
+                alertBox.classList.add('alert-success');
+                // Clear the form fields after successful update
+                document.getElementById('new_password').value = "";
+                document.getElementById('omdb_api_key').value = "";
+            } else {
+                alertBox.textContent = data.error || "Failed to update profile.";
+                alertBox.classList.add('alert-danger');
+            }
+            alertBox.classList.remove('d-none');
+        } catch (err) {
+            alertBox.textContent = "Network error occurred.";
+            alertBox.classList.add('alert-danger');
+            alertBox.classList.remove('d-none');
+        } finally {
+            btn.disabled = false;
+            btn.textContent = "Update Profile";
+        }
+    });
+
+    // --- 2. Handle Account Deletion ---
+    document.getElementById('delete-btn').addEventListener('click', async () => {
+        if (!confirm("Are you sure you want to delete your account? This action cannot be undone and all your saved favorites will be destroyed.")) {
+            return;
+        }
+
+        try {
+            const response = await fetch('/auth/profile', {
+                method: 'DELETE'
+            });
+
+            if (response.ok || response.status === 204) {
+                alert("Account deleted successfully.");
+                window.location.href = '/'; // Kick them back to the login screen
+            } else {
+                const data = await response.json();
+                alert(data.error || "Failed to delete account.");
+            }
+        } catch (err) {
+            alert("Network error occurred.");
+        }
+    });
+</script>
+{% endblock %}

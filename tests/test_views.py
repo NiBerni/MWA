@@ -31,3 +31,19 @@ def test_favorites_dashboard_authenticated(client, auth_client_and_user):
 	assert response.status_code == 302
 	# Confirm they are being redirected specifically to the Add Movie page
 	assert "/add-movie" in response.headers["Location"]
+
+
+from flask.testing import FlaskClient
+
+
+def test_favicon_route(client: FlaskClient) -> None:
+	"""
+	Test that the application gracefully handles automatic browser favicon requests
+	by returning a 204 No Content status.
+
+	:param client: The Flask test client.
+	:return: None
+	"""
+	response = client.get("/favicon.ico")
+	
+	assert response.status_code == 204
