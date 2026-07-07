@@ -12,7 +12,7 @@ def create_app(test_config: Optional[Mapping[str, Any]] = None) -> Flask:
 	:param test_config: Optional dictionary for test configuration.
 	:return: Configured Flask app instance.
 	"""
-	app = Flask(__name__, instance_relative_config=True)
+	app = Flask(__name__, instance_relative_config=True, template_folder="../templates")
 	
 	# Load default configuration
 	app.config.from_mapping(
@@ -33,6 +33,9 @@ def create_app(test_config: Optional[Mapping[str, Any]] = None) -> Flask:
 	
 	from src.auth import auth_bp
 	app.register_blueprint(auth_bp)
+	
+	from src.views import views_bp
+	app.register_blueprint(views_bp)
 	
 	@app.route("/ping")
 	def ping() -> dict[str, str]:

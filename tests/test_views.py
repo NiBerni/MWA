@@ -20,11 +20,14 @@ def test_favorites_dashboard_requires_auth(client):
 
 def test_favorites_dashboard_authenticated(client, auth_client_and_user):
 	"""
-	Ensure authenticated users can access their favorites dashboard.
+	Ensure authenticated users without movies are redirected to the add-movie interface.
 	"""
 	user_id = auth_client_and_user  # Using the user UUID from your fixture
 	
-	# Assuming 'client' is already authenticated via the fixture's session
+	# Attempt to access the dashboard
 	response = client.get("/favorites")
-	assert response.status_code == 200
-	assert b"My Favorites" in response.data
+	
+	# Defensive Assertion: A new user has no movies, so the app MUST return a 302 Redirect
+	assert response.status_code == 302
+	# Confirm they are being redirected specifically to the Add Movie page
+	assert "/add-movie" in response.headers["Location"]
