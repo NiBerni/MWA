@@ -69,7 +69,7 @@ To see the application in action, simply open your browser and navigate to `http
 Here's a simple example of how you can interact with the application:
 
 ```python
-from src.app import app, db
+from src.app import create_app, db
 from src.models import Movie
 
 # Add a new movie to the database
