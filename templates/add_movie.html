@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2 class="fw-bold">Discover & Add Movies</h2>
+        <p class="text-muted">Search the global database by title or apply advanced filters.</p>
+    </div>
+</div>
+
+<div class="card bg-dark text-white border-secondary mb-5">
+    <div class="card-body">
+        <form class="row g-3 align-items-end" id="search-form">
+            <div class="col-md-12 col-lg-4">
+                <label class="form-label" for="title">Movie Title *</label>
+                <input class="form-control bg-secondary text-white border-0" id="title" placeholder="e.g., Inception"
+                       required type="text">
+            </div>
+
+            <div class="col-md-4 col-lg-2">
+                <label class="form-label" for="genre">Genre</label>
+                <input class="form-control bg-secondary text-white border-0" id="genre" placeholder="Action"
+                       type="text">
+            </div>
+            <div class="col-md-4 col-lg-2">
+                <label class="form-label" for="min_rating">Min Rating</label>
+                <input class="form-control bg-secondary text-white border-0" id="min_rating" max="10" placeholder="8.0"
+                       step="0.1" type="number">
+            </div>
+            <div class="col-md-4 col-lg-2">
+                <label class="form-label" for="sort">Sort By</label>
+                <select class="form-select bg-secondary text-white border-0" id="sort">
+                    <option value="rating_desc">Highest Rated</option>
+                    <option value="rating_asc">Lowest Rated</option>
+                    <option value="title_asc">Title (A-Z)</option>
+                </select>
+            </div>
+            <div class="col-md-12 col-lg-2">
+                <button class="btn btn-primary w-100 fw-bold" id="search-btn" type="submit">Search</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="row row-cols-1 row-cols-md-3 row-cols-lg-4 g-4" id="results-container"></div>
+
+<script>
+    document.getElementById('search-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('search-btn');
+        const resultsContainer = document.getElementById('results-container');
+
+        btn.disabled = true;
+        btn.textContent = "Searching...";
+        resultsContainer.innerHTML = '<div class="col-12 text-center text-muted">Fetching data...</div>';
+
+        // Construct Query String dynamically
+        const params = new URLSearchParams();
+        params.append('title', document.getElementById('title').value);
+
+        const genre = document.getElementById('genre').value;
+        if (genre) params.append('genre', genre);
+
+        const minRating = document.getElementById('min_rating').value;
+        if (minRating) params.append('min_rating', minRating);
+
+        params.append('sort', document.getElementById('sort').value);
+
+        try {
+            const response = await fetch(`/api/movies/search?${params.toString()}`);
+            const data = await response.json();
+
+            if (!response.ok) throw new Error(data.error || "Search failed");
+
+            resultsContainer.innerHTML = '';
+            if (data.length === 0) {
+                resultsContainer.innerHTML = '<div class="col-12 text-center text-muted">No movies found.</div>';
+                return;
+            }
+
+            data.forEach(movie => {
+                const card = document.createElement('div');
+                card.className = 'col-md-4 col-lg-3 mb-4';
+                card.innerHTML = `
+                <div class="card h-100 shadow-sm border-0 bg-secondary bg-opacity-10">
+                    <img src="${movie.Poster !== 'N/A' ? movie.Poster : 'https://via.placeholder.com/300x400?text=No+Poster'}" class="card-img-top" alt="Poster" style="height: 350px; object-fit: cover;">
+                    <div class="card-body d-flex flex-column text-white">
+                        <h5 class="card-title fw-bold">${movie.Title} <span class="badge bg-dark">${movie.Year}</span></h5>
+                        <p class="small text-info mb-1">${movie.Genre || 'Unknown Genre'}</p>
+                        <p class="small text-warning mb-3">⭐ ${movie.imdbRating || 'N/A'}</p>
+                        <button class="btn btn-outline-light mt-auto w-100 fw-bold" onclick='addToFavorites(${JSON.stringify(movie).replace(/'/g, "&#39;")})'>+ Add to Favorites</button>
+                    </div>
+                </div>
+            `;
+                resultsContainer.appendChild(card);
+            });
+
+        } catch (err) {
+            resultsContainer.innerHTML = `<div class="col-12 text-center text-danger">${err.message}</div>`;
+        } finally {
+            btn.disabled = false;
+            btn.textContent = "Search";
+        }
+    });
+
+    // Maps OMDb data to our Backend API requirements
+    async function addToFavorites(movie) {
+        const payload = {
+            imdb_id: movie.imdbID,
+            title: movie.Title,
+            poster_url: movie.Poster !== "N/A" ? movie.Poster : null
+        };
+
+        try {
+            const response = await fetch('/api/favorites', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            });
+
+            if (response.status === 201) {
+                alert(`${movie.Title} added to your favorites!`);
+            } else {
+                const data = await response.json();
+                alert(`Error: ${data.error}`);
+            }
+        } catch (err) {
+            alert("Failed to communicate with server.");
+        }
+    }
+</script>
+{% endblock %}

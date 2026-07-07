@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row mb-4 align-items-center">
+    <div class="col">
+        <h2 class="fw-bold">My Favorites</h2>
+    </div>
+    <div class="col-auto">
+        <a class="btn btn-primary" href="{{ url_for('views.add_movie') }}">+ Add New Movie</a>
+    </div>
+</div>
+
+<div class="row row-cols-1 row-cols-md-3 row-cols-lg-4 g-4">
+    {% for movie in movies %}
+    {% include "components/_movie_card.html" %}
+    {% else %}
+    <div class="col-12 text-center py-5">
+        <p class="text-muted fs-5">You haven't added any favorites yet.</p>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}
