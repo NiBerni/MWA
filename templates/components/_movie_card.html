@@ -16,25 +16,30 @@
         </a>
 
         <div class="card-body d-flex flex-column">
-            <p class="card-text mb-2">
-                <small class="text-muted text-uppercase fw-bold">Director</small><br>
-                {% if movie.director and movie.director.name %}
-                <a class="text-primary text-decoration-none fw-semibold"
-                   href="https://en.wikipedia.org/wiki/{{ movie.director.name | urlencode }}"
-                   target="_blank">
-                    {{ movie.director.name }}
-                </a>
-                {% elif movie.director_name %}
-                {# Fallback if accessing dictionary data #}
-                <a class="text-primary text-decoration-none fw-semibold"
-                   href="https://en.wikipedia.org/wiki/{{ movie.director_name | urlencode }}"
-                   target="_blank">
-                    {{ movie.director_name }}
-                </a>
-                {% else %}
-                <span class="text-secondary">Unknown</span>
-                {% endif %}
-            </p>
+
+            <div class="d-flex justify-content-between mb-2">
+                <p class="card-text mb-0">
+                    <small class="text-muted text-uppercase fw-bold">Director</small><br>
+                    {% if movie.director and movie.director.name %}
+                    <a class="text-primary text-decoration-none fw-semibold" href="https://en.wikipedia.org/wiki/{{ movie.director.name | urlencode }}"
+                       target="_blank">
+                        {{ movie.director.name }}
+                    </a>
+                    {% elif movie.director_name %}
+                    <a class="text-primary text-decoration-none fw-semibold" href="https://en.wikipedia.org/wiki/{{ movie.director_name | urlencode }}"
+                       target="_blank">
+                        {{ movie.director_name }}
+                    </a>
+                    {% else %}
+                    <span class="text-secondary">Unknown</span>
+                    {% endif %}
+                </p>
+                <div>
+                    <span class="badge bg-warning text-dark shadow-sm">
+                        ⭐ {{ movie.rating if movie.rating and movie.rating != 'None' else 'N/A' }}
+                    </span>
+                </div>
+            </div>
 
             <div class="d-flex justify-content-between align-items-center mt-auto">
                 <span class="badge bg-dark border border-secondary">{{ movie.year or 'N/A' }}</span>
