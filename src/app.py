@@ -44,6 +44,7 @@ def create_app(test_config: Optional[Mapping[str, Any]] = None) -> Flask:
 			app.config["ENCRYPTION_KEY"] = os.getenv("ENCRYPTION_KEY", "vE7_9-B5XGzP3r8Q2aR1_N9_L0K4Z2W1mJ8vD5xR9Qc=")
 	
 	db.init_app(app)
+	register_db_cli(app)
 	
 	from src.routes import api_bp
 	app.register_blueprint(api_bp)
@@ -81,3 +82,18 @@ def register_favicon_route(app: Flask) -> None:
 		:return: An empty string and a 204 No Content HTTP status code.
 		"""
 		return "", 204
+
+
+def register_db_cli(app: Flask) -> None:
+	"""
+	Registers custom Flask CLI commands for database management.
+	"""
+	
+	@app.cli.command("init-db")
+	def init_db_command() -> None:
+		"""Create new database tables based on SQLAlchemy models."""
+		with app.app_context():
+			# In a production environment, use Alembic migrations.
+			# For this MVP, create_all() safely bootstraps the SQLite file.
+			db.create_all()
+		print("Initialized the database.")

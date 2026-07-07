@@ -42,7 +42,6 @@ Built with an emphasis on defensive programming, data security, and a clean, res
 ```bash
 git clone https://github.com/yourusername/MVP_MovieWebApp.git
 cd MVP_MovieWebApp
-
 ```
 
 2. **Set up your virtual environment:**
@@ -53,7 +52,6 @@ cd MVP_MovieWebApp
 python -m venv venv
 source venv/bin/activate  # On Windows use: venv\Scripts\activate
 pip install -r requirements.txt
-
 ```
 
 3. **Configure Environment Variables:**
@@ -66,15 +64,21 @@ pip install -r requirements.txt
 ```env
 SECRET_KEY=your-super-secret-flask-session-key
 ENCRYPTION_KEY=your-generated-fernet-key-here
-
 ```
 
 4. **Initialize the Database & Run the App:**
-   The SQLite database (instance/moviewebapp.db) will be automatically created on the first run.
+
+   First, initialize the local SQLite database. This command will create `instance/moviewebapp.db` and provision all
+   necessary tables:
+
+```bash
+flask init-db
+```
+
+Next, start the Flask development server:
 
 ```bash
 flask run
-
 ```
 
 The application will be available at [http://127.0.0.1:5000](https://www.google.com/search?q=http://127.0.0.1:5000).
@@ -88,7 +92,6 @@ To run the test suite:
 
 ```bash
 pytest tests/ -v
-
 ```
 
 ## 📁 Project Structure
