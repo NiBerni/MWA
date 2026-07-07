@@ -103,12 +103,17 @@
         }
     });
 
-    // Maps OMDb data to our Backend API requirements
+    // Maps OMDb data to the Backend API requirements
     async function addToFavorites(movie) {
         const payload = {
             imdb_id: movie.imdbID,
             title: movie.Title,
-            poster_url: movie.Poster !== "N/A" ? movie.Poster : null
+            poster_url: movie.Poster !== "N/A" ? movie.Poster : null,
+            // Send the missing metadata to the backend API!
+            year: movie.Year,
+            genre: movie.Genre,
+            rating: movie.imdbRating,
+            director: movie.Director
         };
 
         try {

@@ -1,8 +1,12 @@
+import os
 from typing import Any, Mapping, Optional
 
+from dotenv import load_dotenv
 from flask import Flask
 
 from src.database import db
+
+load_dotenv()
 
 
 def create_app(test_config: Optional[Mapping[str, Any]] = None) -> Flask:
@@ -16,9 +20,10 @@ def create_app(test_config: Optional[Mapping[str, Any]] = None) -> Flask:
 	
 	# Load default configuration
 	app.config.from_mapping(
-			SECRET_KEY='dev',
-			SQLALCHEMY_DATABASE_URI="sqlite:///moviewebapp.db",
+			SECRET_KEY=os.environ.get("FLASK_SECRET_KEY", "dev"),
+			SQLALCHEMY_DATABASE_URI=os.environ.get("DATABASE_URI", "sqlite:///moviewebapp.db"),
 			SQLALCHEMY_TRACK_MODIFICATIONS=False,
+			OMDB_API_KEY=os.environ.get("OMDB_API_KEY", "your_default_key")
 	)
 	# Load the instance config if it exists when not testing
 	if test_config is None:

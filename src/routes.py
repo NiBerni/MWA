@@ -5,7 +5,7 @@ from sqlalchemy import select, tstring
 
 from src.database import db
 from src.decorators import login_required, profile_query
-from src.models import Movie, User
+from src.models import Director, Movie, User
 from src.omdb_client import OMDbAPIError, OMDbClient
 
 api_bp = Blueprint("api", __name__, url_prefix="/api")
@@ -16,11 +16,11 @@ api_bp = Blueprint("api", __name__, url_prefix="/api")
 def add_favorite() -> Any:
 	"""
 	Endpoint to add a movie to the authenticated user's favorites.
-	Strictly validates incoming JSON payloads.
+	Strictly validates incoming JSON payloads and handles Director relations.
 	"""
 	data = request.get_json()
 	
-	# Defensive Guard Clause: Ensure payload exists and contains required fields
+	# Defensive Guard Clause
 	if not data or "imdb_id" not in data or "title" not in data:
 		return jsonify({"error": "Invalid data"}), 400
 	
@@ -30,11 +30,36 @@ def add_favorite() -> Any:
 	if poster_url == "N/A":
 		poster_url = None
 	
+	# --- NEW: Handle Director (Find or Create Pattern) ---
+	director_name = data.get("director")
+	director_id = None
+	
+	if director_name and director_name != "N/A":
+		# Check if this director already exists in our database
+		stmt = select(Director).where(Director.name == director_name)
+		director = db.session.execute(stmt).scalar_one_or_none()
+		
+		# If not, create them so we don't duplicate directors
+		if not director:
+			director = Director(name=director_name)
+			db.session.add(director)
+			db.session.flush()  # Flushes to DB to generate the ID without committing yet
+		
+		director_id = director.id
+	
+	year = data.get("year")
+	rating = data.get("rating")
+	genre = data.get("genre")
+	
 	new_movie = Movie(
 			imdb_id=data["imdb_id"],
 			title=data["title"],
-			user_id=current_user.id,
-			poster_url=poster_url
+			poster_url=poster_url,
+			year=year if year != "N/A" else None,
+			rating=str(rating) if rating and rating != "N/A" else None,
+			genre=genre if genre != "N/A" else None,
+			director_id=director_id,
+			user_id=current_user.id
 	)
 	
 	try:
@@ -42,7 +67,6 @@ def add_favorite() -> Any:
 		db.session.commit()
 	except Exception as e:
 		db.session.rollback()
-		# Fallback error handling (should ideally be caught by @route_error_handler)
 		return jsonify({"error": "Database transaction failed"}), 500
 	
 	return jsonify({"id": new_movie.id}), 201
@@ -166,8 +190,9 @@ def search_favorites() -> Any:
 	sort_by = request.args.get("sort", default="rating_desc", type=str)
 	
 	try:
+		# ADDED m.poster_url to the SELECT clause
 		search_query = tstring(t"""
-	            SELECT m.id, m.imdb_id, m.title, m.year, m.rating, m.genre, d.name AS director_name
+	            SELECT m.id, m.imdb_id, m.title, m.year, m.rating, m.genre, m.poster_url, d.name AS director_name
 	            FROM movies m
 	            LEFT JOIN directors d ON m.director_id = d.id
 	            WHERE m.user_id = {current_user.id}
@@ -179,22 +204,21 @@ def search_favorites() -> Any:
 	                CASE WHEN {sort_by} = 'rating_desc' THEN CAST(m.rating AS FLOAT) END DESC,
 	                CASE WHEN {sort_by} = 'rating_asc' THEN CAST(m.rating AS FLOAT) END ASC,
 	                CASE WHEN {sort_by} = 'title_asc' THEN m.title END ASC,
-	                CAST(m.rating AS FLOAT) DESC -- Fallback default
+	                CAST(m.rating AS FLOAT) DESC
 	        """)
 		
-		# Execute the raw parameterized query
 		result = db.session.execute(search_query).mappings().all()
 		
-		# Format the response
 		movie_list = [
 				{
-						"id":       row["id"],
-						"imdb_id":  row["imdb_id"],
-						"title":    row["title"],
-						"year":     row["year"],
-						"rating":   row["rating"],
-						"genre":    row["genre"],
-						"director": row["director_name"]
+						"id":         row["id"],
+						"imdb_id":    row["imdb_id"],
+						"title":      row["title"],
+						"year":       row["year"],
+						"rating":     row["rating"],
+						"genre":      row["genre"],
+						"poster_url": row["poster_url"],  # <-- ADDED to the JSON response
+						"director":   row["director_name"]
 				}
 				for row in result
 		]
