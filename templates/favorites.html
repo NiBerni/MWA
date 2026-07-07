@@ -10,7 +10,43 @@
     </div>
 </div>
 
-<div class="row row-cols-1 row-cols-md-3 row-cols-lg-4 g-4">
+<div class="card bg-dark border-secondary mb-4 shadow-sm">
+    <div class="card-body py-3">
+        <form class="row g-2 align-items-end" id="filter-form">
+            <div class="col-md-3">
+                <label class="form-label small text-muted mb-1" for="genre-filter">Genre</label>
+                <input class="form-control form-control-sm bg-secondary text-white border-0" id="genre-filter"
+                       placeholder="e.g., Sci-Fi" type="text">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small text-muted mb-1" for="director-filter">Director</label>
+                <input class="form-control form-control-sm bg-secondary text-white border-0" id="director-filter"
+                       placeholder="e.g., Nolan" type="text">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small text-muted mb-1" for="min-rating">Min Rating</label>
+                <input class="form-control form-control-sm bg-secondary text-white border-0" id="min-rating" max="10"
+                       placeholder="8.0" step="0.1"
+                       type="number">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small text-muted mb-1" for="sort-by">Sort</label>
+                <select class="form-select form-select-sm bg-secondary text-white border-0" id="sort-by">
+                    <option value="rating_desc">Highest Rated</option>
+                    <option value="rating_asc">Lowest Rated</option>
+                    <option value="title_asc">Title (A-Z)</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button class="btn btn-outline-light btn-sm w-100 fw-bold h-100 py-2" id="filter-btn" type="submit">
+                    Apply Filters
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="row row-cols-1 row-cols-md-3 row-cols-lg-4 g-4" id="favorites-grid">
     {% for movie in movies %}
     {% include "components/_movie_card.html" %}
     {% else %}
@@ -19,4 +55,200 @@
     </div>
     {% endfor %}
 </div>
+
+
+<div aria-hidden="true" class="modal fade" id="editMovieModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-dark text-white border-secondary">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title fw-bold">✏️ Edit Movie</h5>
+                <button aria-label="Close" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                        type="button"></button>
+            </div>
+            <div class="modal-body">
+                <form id="edit-movie-form">
+                    <input id="edit-movie-id" type="hidden">
+
+                    <div class="mb-3">
+                        <label class="form-label text-muted" for="edit-rating">My Rating (0-10)</label>
+                        <input class="form-control bg-secondary text-white border-0" id="edit-rating" max="10" min="0"
+                               step="0.1" type="number">
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label text-muted" for="edit-genre">Genre Tags</label>
+                        <input class="form-control bg-secondary text-white border-0" id="edit-genre"
+                               placeholder="e.g., Sci-Fi, Thriller"
+                               type="text">
+                    </div>
+
+                    <button class="btn btn-info w-100 fw-bold" type="submit">Save Changes</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<script>
+    // --- 1. FILTERING LOGIC ---
+    document.getElementById('filter-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('filter-btn');
+        const grid = document.getElementById('favorites-grid');
+
+        btn.disabled = true;
+        btn.textContent = "Filtering...";
+
+        // Construct the query parameters
+        const params = new URLSearchParams();
+        const genre = document.getElementById('genre-filter').value;
+        if (genre) params.append('genre', genre);
+
+        const director = document.getElementById('director-filter').value;
+        if (director) params.append('author', director);
+
+        const minRating = document.getElementById('min-rating').value;
+        if (minRating) params.append('min_rating', minRating);
+
+        params.append('sort', document.getElementById('sort-by').value);
+
+        try {
+            // Fetch the filtered data from your secure backend API
+            const response = await fetch(`/api/favorites/search?${params.toString()}`);
+            if (!response.ok) throw new Error("Failed to fetch filtered data.");
+
+            const movies = await response.json();
+
+            // Clear the current grid
+            grid.innerHTML = '';
+
+            // Handle empty states defensively
+            if (movies.length === 0) {
+                grid.innerHTML = '<div class="col-12 text-center py-5"><p class="text-muted fs-5">No movies match your filters.</p></div>';
+                return;
+            }
+
+            // Reconstruct the movie cards dynamically
+            movies.forEach(movie => {
+                const encodedName = encodeURIComponent(movie.director || 'Unknown');
+
+                // Defensive check for missing posters
+                const posterHtml = (movie.poster_url && movie.poster_url !== "N/A")
+                    ? `<img src="${movie.poster_url}" class="card-img-top movie-poster" alt="Poster">`
+                    : `<img src="https://via.placeholder.com/300x400?text=No+Poster" class="card-img-top movie-poster" alt="No Poster">`;
+
+                // Defensively escape strings for HTML injection to prevent JS crashes on quotes
+                const safeRating = (movie.rating || '').replace(/'/g, "\\'");
+                const safeGenre = (movie.genre || '').replace(/'/g, "\\'");
+
+                const card = document.createElement('div');
+                card.className = 'col-md-4 col-lg-3 mb-4';
+                card.innerHTML = `
+                <div class="card h-100 shadow-sm border-0 bg-secondary bg-opacity-10">
+
+                    <a href="https://www.imdb.com/title/${movie.imdb_id}/" target="_blank" class="text-decoration-none">
+                        <div class="position-relative">
+                            ${posterHtml}
+                            <div class="card-img-overlay p-0 d-flex flex-column justify-content-start">
+                                <h5 class="card-title title-overlay text-white p-3 m-0 text-center w-100 shadow">${movie.title}</h5>
+                            </div>
+                        </div>
+                    </a>
+
+                    <div class="card-body d-flex flex-column">
+                        <p class="card-text mb-2">
+                            <small class="text-muted text-uppercase fw-bold">Director</small><br>
+                            <a href="https://en.wikipedia.org/wiki/${encodedName}" target="_blank" class="text-primary text-decoration-none fw-semibold">
+                                ${movie.director || 'Unknown'}
+                            </a>
+                        </p>
+                        <div class="d-flex justify-content-between align-items-center mt-auto">
+                            <span class="badge bg-dark border border-secondary">${movie.year || 'N/A'}</span>
+                            <span class="badge bg-primary text-wrap" style="max-width: 150px;">${movie.genre || 'N/A'}</span>
+                        </div>
+                    </div>
+
+                    <div class="card-footer bg-transparent border-0 pt-0 pb-3 d-flex justify-content-between">
+                        <button class="btn btn-sm btn-outline-info fw-bold px-3" onclick="openEditModal(${movie.id}, '${safeRating}', '${safeGenre}')">✏️ Edit</button>
+                        <button class="btn btn-sm btn-outline-danger fw-bold px-3" onclick="deleteFavorite(${movie.id})">🗑️ Remove</button>
+                    </div>
+
+                </div>
+            `;
+                grid.appendChild(card);
+            });
+        } catch (err) {
+            alert("An error occurred while filtering your movies.");
+        } finally {
+            btn.disabled = false;
+            btn.textContent = "Apply Filters";
+        }
+    });
+
+    // --- 2. DELETE LOGIC ---
+    async function deleteFavorite(movieId) {
+        if (!confirm("Are you sure you want to remove this movie from your favorites?")) return;
+
+        try {
+            const response = await fetch(`/api/favorites/${movieId}`, {method: 'DELETE'});
+            if (response.status === 204) {
+                location.reload(); // Reload the page to refresh the view immediately
+            } else {
+                const data = await response.json();
+                alert(`Error: ${data.error}`);
+            }
+        } catch (e) {
+            alert("Network error failed to delete movie.");
+        }
+    }
+
+    // --- 3. EDIT LOGIC (MODAL) ---
+    let editModalInstance;
+
+    // Initialize the Bootstrap modal once the DOM is fully loaded
+    document.addEventListener("DOMContentLoaded", () => {
+        editModalInstance = new bootstrap.Modal(document.getElementById('editMovieModal'));
+    });
+
+    // Function called by the "Edit" button on the card
+    function openEditModal(id, currentRating, currentGenre) {
+        document.getElementById('edit-movie-id').value = id;
+
+        // Populate the form fields, defending against 'None' or 'N/A'
+        document.getElementById('edit-rating').value = (currentRating !== 'None' && currentRating !== 'N/A') ? currentRating : '';
+        document.getElementById('edit-genre').value = (currentGenre !== 'None' && currentGenre !== 'N/A') ? currentGenre : '';
+
+        // Show the modal
+        editModalInstance.show();
+    }
+
+    // Handle the Edit form submission
+    document.getElementById('edit-movie-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const id = document.getElementById('edit-movie-id').value;
+
+        const payload = {
+            rating: document.getElementById('edit-rating').value,
+            genre: document.getElementById('edit-genre').value
+        };
+
+        try {
+            const response = await fetch(`/api/favorites/${id}`, {
+                method: 'PATCH',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            });
+
+            if (response.ok) {
+                location.reload(); // Reload to show the updated data
+            } else {
+                const data = await response.json();
+                alert(`Error: ${data.error}`);
+            }
+        } catch (e) {
+            alert("Network error failed to update movie.");
+        }
+    });
+</script>
 {% endblock %}
