@@ -29,7 +29,6 @@ def create_app(test_config: Optional[Mapping[str, Any]] = None) -> Flask:
 			)
 	)
 	
-	# Load the instance config if it exists when not testing
 	if test_config is None:
 		app.config.from_pyfile("config.py", silent=True)
 	else:

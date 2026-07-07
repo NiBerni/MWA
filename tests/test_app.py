@@ -13,7 +13,6 @@ def test_app_creation(app: Flask) -> None:
 def test_route_error_handler(app: Flask, client: FlaskClient):
 	"""Test that the route_error_handler decorator correctly handles exceptions"""
 	
-	# Define a test route that raises an exception
 	@app.route("/faulty-route")
 	@route_error_handler
 	def error_route():

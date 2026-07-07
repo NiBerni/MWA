@@ -14,7 +14,6 @@ def test_favorites_dashboard_requires_auth(client):
 	and are redirected to the index/login page.
 	"""
 	response = client.get("/favorites")
-	# Flask-Login or custom decorators typically return 302 Redirect or 401
 	assert response.status_code in [302, 401]
 
 
@@ -22,14 +21,12 @@ def test_favorites_dashboard_authenticated(client, auth_client_and_user):
 	"""
 	Ensure authenticated users without movies are redirected to the add-movie interface.
 	"""
-	user_id = auth_client_and_user  # Using the user UUID from your fixture
+	user_id = auth_client_and_user
 	
-	# Attempt to access the dashboard
 	response = client.get("/favorites")
 	
-	# Defensive Assertion: A new user has no movies, so the app MUST return a 302 Redirect
 	assert response.status_code == 302
-	# Confirm they are being redirected specifically to the Add Movie page
+	
 	assert "/add-movie" in response.headers["Location"]
 
 
@@ -40,9 +37,6 @@ def test_favicon_route(client: FlaskClient) -> None:
 	"""
 	Test that the application gracefully handles automatic browser favicon requests
 	by returning a 204 No Content status.
-
-	:param client: The Flask test client.
-	:return: None
 	"""
 	response = client.get("/favicon.ico")
 	
