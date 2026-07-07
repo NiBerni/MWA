@@ -1,6 +1,6 @@
 from typing import Any, cast
 
-from flask import Blueprint, current_app, jsonify, request
+from flask import Blueprint, jsonify, request
 from sqlalchemy import select, tstring
 
 from src.database import db
@@ -237,23 +237,32 @@ def search_favorites() -> Any:
 def search_movie_tree() -> Any:
 	"""
 	Search Tree for new movies.
-	1. Fetches from OMDb.
+	1. Fetches from OMDb using the user's specific API key.
 	2. Applies filters (Genre, Rating, Director) locally.
 	3. Sorts based on user preference.
 	"""
 	# 1. Extract parameters
-	title = request.args.get("title", "")
+	title = request.args.get("title", "").strip()
 	genre_filter = request.args.get("genre")
 	director_filter = request.args.get("director")
 	min_rating = request.args.get("min_rating", type=float)
 	max_rating = request.args.get("max_rating", type=float)
 	sort_by = request.args.get("sort", default="rating_desc")
 	
+	# Defensive Input Validation
 	if not title:
 		return jsonify({"error": "Title is required"}), 400
 	
-	api_key = current_app.config.get("OMDB_API_KEY", "your_default_key")
-	client = OMDbClient(api_key=api_key)
+	current_user = cast(User, getattr(request, "user"))
+	
+	user_api_key = getattr(current_user, "omdb_api_key", None)
+	
+	if not user_api_key:
+		return jsonify({
+				"error": "OMDb API key missing. Please add your API key in your profile settings to search for movies."
+		}), 403
+	
+	client = OMDbClient(api_key=user_api_key)
 	
 	try:
 		movies = client.search_movies(title)

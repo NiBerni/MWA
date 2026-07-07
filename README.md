@@ -1,116 +1,127 @@
-# MovieWebApp
+# 🎬 MovieWebApp
 
-[![Python 3.14](https://img.shields.io/badge/python-3.14-blue.svg)](https://www.python.org/downloads/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![CI Status](https://github.com/yourusername/MVP_MovieWebApp/actions/workflows/ci.yml/badge.svg)](https://github.com/yourusername/MVP_MovieWebApp/actions/workflows/ci.yml)
+A lightweight, secure Flask web application that allows users to search for their favorite movies via the OMDb API and
+curate a personal movie dashboard.
 
-**MVP_MovieWebApp** is a lightweight movie database web application built to help you keep track of your favorite films.
-It's designed with simplicity and functionality in mind, adhering to modern Python standards and best practices.
+Built with an emphasis on defensive programming, data security, and a clean, responsive dark-mode UI.
 
-## Project Structure
+## ✨ Features
 
-```text
-MVP_MovieWebApp
-├── .cadence             # Cadence configuration for development workflow
-├── src                  # Source code directory
-│   ├── templates        # HTML templates for the web application
-│   └── app.py           # Main application file
-├── tests                # Test cases for the application
-├── .env.example         # Example environment variables file
-├── pyproject.toml       # Project configuration file for poetry
-├── README.md            # This documentation file
-└── requirements.txt     # List of project dependencies
-```
+* **Secure Authentication:** User registration and login flow with Werkzeug password hashing.
+* **Encrypted API Key Storage:** Users provide their own personal OMDb API keys during registration. Keys are
+  transparently encrypted in the SQLite database using symmetric encryption (Fernet) to prevent plaintext exposure.
+* **Dynamic Movie Search:** Live integration with the OMDb API to fetch movie posters, directors, release years, and
+  IMDB ratings.
+* **Personalized Dashboard:** Users can save movies to their favorites list. Database cascades ensure that if an account
+  is deleted, all associated user data is safely wiped.
+* **Profile Management:** Users can seamlessly update their passwords, swap out their OMDb API keys, or permanently
+  delete their accounts.
+* **Responsive Dark UI:** Frontend built with Bootstrap 5, featuring a sleek, responsive dark theme and interactive SVG
+  UI elements.
 
-## Tech Stack & Standards
+## 🛠️ Tech Stack
 
-- **Python 3.14**: The application is built using Python 3.14, ensuring compatibility and performance.
-- **Flask**: A micro web framework for building the backend.
-- **SQLAlchemy 2.1**: ORM to interact with the database efficiently.
-- **Jinja2**: For templating HTML files.
-- **PEP 8 & PEP 20**: Adherence to Python's style guide and Zen of Python for clean and maintainable code.
+* **Backend:** Python 3, Flask
+* **Database:** SQLite, SQLAlchemy (ORM)
+* **Security:** Cryptography (Fernet), Werkzeug Security
+* **Frontend:** HTML5, Jinja2, Bootstrap 5 (CDN), Vanilla JavaScript
+* **Testing:** Pytest, Flask-Testing
 
-## Getting Started
+## 🚀 Getting Started
 
 ### Prerequisites
 
-- Ensure you have Python 3.14 installed on your system.
-- It’s recommended to use a virtual environment for this project.
+1. **Python 3.10+** installed on your machine.
+2. An **OMDb API Key**. (Users will need to get a free key from [omdbapi.com](http://www.omdbapi.com/apikey.aspx) to
+   register).
 
 ### Installation
 
-1. **Create a Virtual Environment:**
-   ```bash
-   python -m venv venv
-   ```
+1. **Clone the repository:**
 
-2. **Activate the Virtual Environment:**
-   ```bash
-   # On Windows:
-   venv\Scripts\activate
-   # On macOS and Linux:
-   source venv/bin/activate
-   ```
+```bash
+git clone https://github.com/yourusername/MVP_MovieWebApp.git
+cd MVP_MovieWebApp
 
-3. **Install Dependencies:**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-4. **Run the Application:**
-   ```bash
-   python src/app.py
-   ```
-
-## Usage
-
-To see the application in action, simply open your browser and navigate to `http://127.0.0.1:5000/`.
-
-Here's a simple example of how you can interact with the application:
-
-```python
-from src.app import create_app, db
-from src.models import Movie
-
-# Add a new movie to the database
-with app.app_context():
-	new_movie = Movie(title="Inception", year=2010)
-	db.session.add(new_movie)
-	db.session.commit()
 ```
 
-## Outlook (Known Issues & Future Features)
+2. **Set up your virtual environment:**
+   *(Note: This project includes a uv.lock file, meaning you can use the blazing-fast uv package manager, or standard
+   venv/pip)*
 
-### Known Issues
+```bash
+python -m venv venv
+source venv/bin/activate  # On Windows use: venv\Scripts\activate
+pip install -r requirements.txt
 
-- **Database Migration:** Currently, there's no built-in migration system for handling schema changes.
-- **User Authentication:** Basic user authentication is not implemented.
+```
 
-### Future Features
+3. **Configure Environment Variables:**
+   Create a .env file in the root directory. You must generate a valid 32-url-safe-base64-encoded string for the Fernet
+   encryption key.
+   To generate an encryption key, run this in your python terminal:
+   from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())
+   Add the following to your .env file:
 
-- **Advanced Search:** Implement a more sophisticated search functionality to find movies by title, genre, etc.
-- **User Profiles:** Allow users to create profiles and save their favorite movies.
-- **Integration with IMDb API:** Fetch movie data from the IMDb database for up-to-date information.
+```env
+SECRET_KEY=your-super-secret-flask-session-key
+ENCRYPTION_KEY=your-generated-fernet-key-here
 
-We believe that "code is never truly finished" and welcome contributions from the community. Feel free to open issues,
-submit pull requests, or share your ideas!
+```
 
-## Contributing
+4. **Initialize the Database & Run the App:**
+   The SQLite database (instance/moviewebapp.db) will be automatically created on the first run.
 
-If you'd like to contribute to this project, please follow these steps:
+```bash
+flask run
 
-1. Fork the repository.
-2. Create a new branch (`git checkout -b feature/your-feature`).
-3. Make changes and commit them (`git add . && git commit -m 'Add some feature'`).
-4. Push the changes to your forked repository (`git push origin feature/your-feature`).
-5. Open a pull request.
+```
 
-We look forward to your contributions!
+The application will be available at [http://127.0.0.1:5000](https://www.google.com/search?q=http://127.0.0.1:5000).
+
+## 🧪 Running Tests
+
+This project employs Defensive TDD (Test-Driven Development). The test suite covers database cascades, session
+invalidation, security injections, and OMDB client fetching.
+
+To run the test suite:
+
+```bash
+pytest tests/ -v
+
+```
+
+## 📁 Project Structure
+
+```text
+MVP_MovieWebApp/
+├── src/
+│   ├── app.py             # Flask application factory
+│   ├── auth.py            # Authentication & profile routing
+│   ├── database.py        # SQLAlchemy db instance
+│   ├── decorators.py      # Security & session guard clauses
+│   ├── models.py          # SQLAlchemy ORM Models (User, Movie, Director)
+│   ├── omdb_client.py     # External API integration layer
+│   ├── routes.py          # API Endpoints
+│   └── views.py           # Frontend HTML rendering routes
+├── templates/             # Jinja2 HTML Templates
+├── tests/                 # Pytest suite
+├── instance/              # Local SQLite Database (auto-generated)
+├── requirements.txt       # Dependencies
+└── pyproject.toml         # Project metadata
+
+```
+
+## 🛡️ Security Considerations
+
+* **Session Poisoning Prevention:** The application actively clears orphaned session cookies if database lookups fail or
+  UUIDs are malformed.
+* **Write-Only Passwords:** The User model enforces write-only access to password fields, preventing accidental logging
+  or exposure of plaintext passwords.
+* **Sanitized Deletion:** Deleting a user profile triggers SQLAlchemy cascades to wipe all associated foreign-key data,
+  leaving no orphaned records in the database.
 
 ---
 
-**Maintainer:** [Your Name]
-
-**License:** MIT License
-
-**Project Home:** [GitHub Repository URL]
+*Created as a Minimum Viable Product (MVP).*
+'''
