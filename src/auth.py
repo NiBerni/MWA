@@ -12,7 +12,20 @@ auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
 
 @auth_bp.route("/register", methods=["POST"])
 def register() -> Any:
-	"""Register a new user with their custom OMDb API key."""
+	"""Register a new user.
+
+	Registers a new user with the provided username, password, and OMDB API key. The function performs several checks before creating a new user:
+
+	1. Verifies that all required data fields (username, password, and OMDB API key) are present in the request JSON.
+	2. Checks if the username already exists in the database to avoid duplicate entries.
+
+	If any of these conditions are not met, an appropriate error message is returned with the corresponding HTTP status code. If the user creation is successful, a success message is returned with a 201 Created status code. In case of any exceptions during the registration process (e.g., database errors), the function logs the exception and returns a failure message with a 500 Internal Server Error status code.
+
+	:param data: JSON data containing user information.
+	:type data: dict
+	:return: A JSON response indicating the result of the registration attempt.
+	:rtype: Flask.Response
+	"""
 	data = request.get_json()
 	
 	# Defensive Guard Clause
@@ -41,7 +54,16 @@ def register() -> Any:
 
 @auth_bp.route("/login", methods=["POST"])
 def login() -> Any:
-	"""Authenticates the user and initiates a session."""
+	"""
+	Execute the login process for a user.
+
+	This function handles the POST request to the "/login" endpoint, which is responsible for authenticating a user based on provided username and password. If the credentials are valid, it sets the user ID in the session and returns a success message. Otherwise, it returns an error message indicating invalid credentials.
+
+	:param data: JSON data containing username and password
+	:type data: dict
+	:return: A tuple containing the response JSON and HTTP status code
+	:rtype: Tuple[dict, int]
+	"""
 	data = request.get_json()
 	if not data or "username" not in data or "password" not in data:
 		return jsonify({"error": "Missing credentials"}), 400
@@ -59,7 +81,17 @@ def login() -> Any:
 @auth_bp.route("/profile", methods=["PATCH"])
 @login_required
 def update_profile() -> Any:
-	"""Updates the authenticated user's password and/or OMDb API Key."""
+	"""
+	Update the authenticated user's profile.
+
+	This view function handles PATCH requests at '/profile' endpoint and allows updating of the current user's password or OMDB API key. It ensures that only valid JSON payloads are processed and updates the specified fields in the database atomically.
+
+	:param data: A dictionary containing the request body with possible keys 'password' and 'omdb_api_key'.
+	:type data: dict
+
+	:return: A JSON response indicating success or failure of the profile update.
+	:rtype: Flask.Response
+	"""
 	current_user = cast(User, getattr(request, "user"))
 	data = request.get_json()
 	
@@ -87,9 +119,12 @@ def update_profile() -> Any:
 @login_required
 def delete_profile() -> Any:
 	"""
-	Deletes the authenticated user.
-	Leverages the ORM db.session.delete() to trigger SQLAlchemy cascades,
-	ensuring all related favorite movies are also securely wiped.
+	Delete the current user's profile.
+
+	:return: An empty response with status code 204 if the deletion is successful.
+	:rtype: Tuple[None, int]
+
+	:raises Exception: If an error occurs during the deletion process.
 	"""
 	current_user = cast(User, getattr(request, "user"))
 	
@@ -110,6 +145,10 @@ def delete_profile() -> Any:
 
 @auth_bp.route("/logout", methods=["POST"])
 def logout() -> Any:
-	"""Securely terminates the user session."""
+	"""
+	Logout the user.
+	
+	Clears the session and returns a JSON response indicating successful logout.
+	"""
 	session.clear()
 	return jsonify({"message": "Logged out successfully"}), 200

@@ -15,8 +15,11 @@ logger = logging.getLogger(__name__)
 
 def route_error_handler(func: Callable) -> Callable:
 	"""
-	A decorator to handle exceptions in Flask route functions.
-	Logs the exception and returns a JSON response with a 500 status code.
+	Decorator to handle exceptions raised by routes.
+
+	:param func: The function to be decorated.
+	:return: A new function that wraps the original function and handles any exceptions it may raise.
+
 	"""
 	
 	@wraps(func)
@@ -34,8 +37,12 @@ def route_error_handler(func: Callable) -> Callable:
 
 def login_required(func: Callable) -> Callable:
 	"""
-	Decorator to protect routes that require an authenticated user.
-	Includes defensive checks to prevent database casting errors and destroys orphaned sessions.
+	Wraps a Flask route function to ensure that the request is made by an authenticated user.
+
+	:param func: The Flask route function to be wrapped.
+	:return: The wrapped function.
+	:raises jsonify: If the session key is missing or malformed.
+	:raises jsonify: If there is an error during database lookup.
 	"""
 	
 	@wraps(func)
@@ -81,8 +88,11 @@ perf_logger.setLevel(logging.INFO)
 
 def profile_query(func: Callable) -> Callable:
 	"""
-	Measures execution time.
-	Fixed: Variable name corrected to execution_time_ms.
+	Profile a function to measure and log its execution time.
+
+	:param func: The function to be profiled.
+	:return: A new function that logs the execution time of the original function.
+
 	"""
 	
 	@wraps(func)

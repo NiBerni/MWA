@@ -15,12 +15,18 @@ api_bp = Blueprint("api", __name__, url_prefix="/api")
 @login_required
 def add_favorite() -> Any:
 	"""
-	Endpoint to add a movie to the authenticated user's favorites.
-	Strictly validates incoming JSON payloads and handles Director relations.
+	Add a favorite movie to the user's list.
+
+	:param data: JSON data containing movie details.
+	:type data: dict
+
+	:return: JSON response indicating success or failure.
+	:rtype: Any
+
+	:raises ValueError: If required fields are missing in the input data.
 	"""
 	data = request.get_json()
 	
-	# Defensive Guard Clause
 	if not data or "imdb_id" not in data or "title" not in data:
 		return jsonify({"error": "Invalid data"}), 400
 	
@@ -30,20 +36,17 @@ def add_favorite() -> Any:
 	if poster_url == "N/A":
 		poster_url = None
 	
-	# --- NEW: Handle Director (Find or Create Pattern) ---
 	director_name = data.get("director")
 	director_id = None
 	
 	if director_name and director_name != "N/A":
-		# Check if this director already exists in our database
 		stmt = select(Director).where(Director.name == director_name)
 		director = db.session.execute(stmt).scalar_one_or_none()
 		
-		# If not, create them so we don't duplicate directors
 		if not director:
 			director = Director(name=director_name)
 			db.session.add(director)
-			db.session.flush()  # Flushes to DB to generate the ID without committing yet
+			db.session.flush()
 		
 		director_id = director.id
 	
@@ -76,11 +79,10 @@ def add_favorite() -> Any:
 @login_required
 def get_favorites() -> Any:
 	"""
-	Retrieve all favorite movies for the currently authenticated user.
+
 	"""
 	current_user = cast(User, getattr(request, "user"))
 	
-	# SQLAlchemy 2.0 execute style
 	stmt = select(Movie).where(Movie.user_id == current_user.id)
 	movies = db.session.execute(stmt).scalars().all()
 	
@@ -104,8 +106,13 @@ def get_favorites() -> Any:
 @login_required
 def update_favorite(movie_id: int) -> Any:
 	"""
-	Update details (e.g., rating, genre) of a specific favorite movie.
-	Strictly verifies ownership to prevent IDOR attacks.
+	Update a user's favorite movie with new rating or genre.
+
+	:param movie_id: The ID of the movie to update.
+	:type movie_id: int
+
+	:return: A JSON response indicating success or failure.
+	:rtype: Any
 	"""
 	current_user = cast(User, getattr(request, "user"))
 	data = request.get_json()
@@ -146,8 +153,12 @@ def update_favorite(movie_id: int) -> Any:
 @login_required
 def delete_favorite(movie_id: int) -> Any:
 	"""
-	Remove a movie from the user's favorites.
-	Utilizes SQLAlchemy's modern PEP 750 t-string processor for secure raw SQL execution.
+	Deletes a favorite movie from the user's list.
+
+	:param movie_id: ID of the movie to be deleted.
+	:return: Empty response with status code 204 if the deletion is successful. JSON error message with status code 404 if the movie is not found or unauthorized. JSON error message with status code 500 if an error occurs during the deletion process.
+
+	:raises Exception: If an unexpected error occurs during the database operation.
 	"""
 	current_user = cast(User, getattr(request, "user"))
 	
@@ -172,9 +183,25 @@ def delete_favorite(movie_id: int) -> Any:
 @profile_query
 def search_favorites() -> Any:
 	"""
-	Dynamic Search Endpoint.
-	Filters by Genre, Director, and IMDb Rating boundaries.
-	Features SQL-safe dynamic sorting via PEP 750 t-strings.
+	Execute the search for favorite movies based on various filters and sorting options.
+
+	:param genre_filter: Filter movies by genre.
+	:type genre_filter: str or None
+
+	:param author_filter: Filter movies by director's name.
+	:type author_filter: str or None
+
+	:param min_rating: Minimum movie rating to include in results.
+	:type min_rating: float or None
+
+	:param max_rating: Maximum movie rating to include in results.
+	:type max_rating: float or None
+
+	:param sort_by: Sorting preference for the search results ('rating_desc', 'rating_asc', 'title_asc').
+	:type sort_by: str
+
+	:return: A JSON list of favorite movies that match the specified filters and sorting options.
+	:rtype: dict
 	"""
 	current_user = cast(User, getattr(request, "user"))
 	
@@ -190,7 +217,6 @@ def search_favorites() -> Any:
 	sort_by = request.args.get("sort", default="rating_desc", type=str)
 	
 	try:
-		# ADDED m.poster_url to the SELECT clause
 		search_query = tstring(t"""
 	            SELECT m.id, m.imdb_id, m.title, m.year, m.rating, m.genre, m.poster_url, d.name AS director_name
 	            FROM movies m
@@ -236,12 +262,10 @@ def search_favorites() -> Any:
 @profile_query
 def search_movie_tree() -> Any:
 	"""
-	Search Tree for new movies.
-	1. Fetches from OMDb using the user's specific API key.
-	2. Applies filters (Genre, Rating, Director) locally.
-	3. Sorts based on user preference.
+	Search for movies based on various filters and return a sorted list.
+
+	This endpoint allows users to search for movies by title, genre, director, minimum rating, and maximum rating. The results are then filtered and sorted based on the provided parameters before being returned in JSON format.
 	"""
-	# 1. Extract parameters
 	title = request.args.get("title", "").strip()
 	genre_filter = request.args.get("genre")
 	director_filter = request.args.get("director")
@@ -249,7 +273,6 @@ def search_movie_tree() -> Any:
 	max_rating = request.args.get("max_rating", type=float)
 	sort_by = request.args.get("sort", default="rating_desc")
 	
-	# Defensive Input Validation
 	if not title:
 		return jsonify({"error": "Title is required"}), 400
 	

@@ -13,8 +13,20 @@ from src.database import db
 
 class User(db.Model):
 	"""
-	User model representing registered individuals.
-	Uses UUID4 to prevent sequential ID guessing (enumeration).
+	Represents a user in the system.
+
+	Users have unique usernames and passwords, and can have favorite movies. They also have an associated OMDb API key that is encrypted for storage.
+
+	:ivar id: Unique identifier for the user.
+	:type id: uuid.UUID
+	:ivar username: Username of the user, must be unique.
+	:type username: str
+	:ivar password_hash: Hashed version of the user's password.
+	:type password_hash: str
+	:ivar _omdb_api_key_encrypted: Encrypted OMDb API key for the user.
+	:type _omdb_api_key_encrypted: str
+	:ivar favorite_movies: List of movies that the user has marked as favorites.
+	:type favorite_movies: List[Movie]
 	"""
 	__tablename__ = "users"
 	
@@ -63,8 +75,22 @@ class User(db.Model):
 
 class Director(db.Model):
 	"""
-	Director model representing the individual who directed a Movie.
-	Extended with birthdate and nationality for richer metadata.
+	Represent a movie director in the database.
+
+	A ``Director`` object encapsulates information about a film director, including their name,
+	birthdate, nationality, and associated movies. This class is part of the ORM model for directors
+	in the application's database.
+
+	:ivar id: Unique identifier for the director.
+	:type id: int
+	:ivar name: Full name of the director.
+	:type name: str
+	:ivar birthdate: Date of birth of the director.
+	:type birthdate: Optional[date]
+	:ivar nationality: Nationality of the director.
+	:type nationality: str
+	:ivar movies: List of ``Movie`` objects associated with this director.
+	:type movies: List["Movie"]
 	"""
 	__tablename__ = "directors"
 	
@@ -80,7 +106,32 @@ class Director(db.Model):
 
 class Movie(db.Model):
 	"""
-	Movie model representing a user's favorite movie fetched from OMDb.
+	Represent a movie entity in the database.
+
+	This class represents a movie entity and its attributes. It is used to store information about movies in the database, including their title, year, rating, genre, poster URL, user ID, director ID, and relationships with users and directors.
+
+	:ivar id: Unique identifier for the movie.
+	:type id: int
+	:ivar imdb_id: IMDb ID of the movie.
+	:type imdb_id: str
+	:ivar title: Title of the movie.
+	:type title: str
+	:ivar year: Year of release of the movie (optional).
+	:type year: str, optional
+	:ivar rating: Rating of the movie (optional).
+	:type rating: str, optional
+	:ivar genre: Genre of the movie (optional).
+	:type genre: str, optional
+	:ivar poster_url: URL of the movie's poster (optional).
+	:type poster_url: str, optional
+	:ivar user_id: ID of the user who added the movie to their favorites.
+	:type user_id: uuid.UUID
+	:ivar director_id: ID of the director associated with the movie (optional).
+	:type director_id: int, optional
+	:ivar user: Relationship with the User model indicating which user has favorited the movie.
+	:type user: User
+	:ivar director: Relationship with the Director model indicating which director is associated with the movie (optional).
+	:type director: Optional[Director]
 	"""
 	__tablename__ = "movies"
 	

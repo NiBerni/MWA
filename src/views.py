@@ -13,9 +13,10 @@ views_bp = Blueprint("views", __name__)
 @views_bp.route("/")
 def index() -> Any:
 	"""
-	Renders the Start Page.
-	If the user is already authenticated via our custom session flow,
-	redirect them to their favorites.
+	Redirect to the user's favorite page if they are logged in.
+
+	:return: A redirect response to the favorite page or a rendered index template.
+	:rtype: Any
 	"""
 	# Defensive Check: If 'user_id' is in the session, they are logged in.
 	if "user_id" in session:
@@ -26,9 +27,11 @@ def index() -> Any:
 
 @views_bp.route("/register")
 def register() -> Any:
-	"""
-	Renders the Registration Page.
-	Defensively redirects authenticated users to the dashboard.
+	"""Execute the registration page.
+
+	This view handles rendering of the registration form and redirects logged-in users to their favorites page.
+	:return: A rendered HTML template if not logged in, or a redirect response if logged in.
+	:rtype: Any
 	"""
 	if "user_id" in session:
 		return redirect(url_for("views.favorites"))
@@ -40,8 +43,12 @@ def register() -> Any:
 @login_required
 def favorites() -> Any:
 	"""
-	Renders the user's favorite movies.
-	If the user has no favorites, redirects them to the Add Movie page.
+	Display the list of favorite movies for the current user.
+
+	This view function retrieves the list of movies that have been marked as favorites by the currently logged-in user. If the user is not authenticated, the function redirects to the main index page. If no favorite movies are found, it redirects to a page where users can add movies.
+
+	:return: A rendered HTML template displaying the list of favorite movies or redirects.
+	:rtype: Any
 	"""
 	active_user = getattr(request, "user", None)
 	
@@ -61,7 +68,11 @@ def favorites() -> Any:
 @login_required
 def add_movie() -> Any:
 	"""
-	Renders the Add Movie search interface.
+
+	Render the "add_movie" template for adding a new movie.
+
+	:return: HTML template for adding a new movie
+
 	"""
 	return render_template("add_movie.html")
 
@@ -70,6 +81,9 @@ def add_movie() -> Any:
 @login_required
 def profile() -> Any:
 	"""
-	Renders the User Profile management page.
+	Render the user's profile page.
+
+	:return: The rendered HTML template for the user's profile.
+	:rtype: Any
 	"""
 	return render_template("profile.html")
